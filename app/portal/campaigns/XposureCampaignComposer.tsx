@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { type PromotionTemplate } from "@/lib/whatsapp-promotion-message";
+import { mapPromotionMessage, renderPromotionMessage, type PromotionTemplate } from "@/lib/whatsapp-promotion-message";
+import CampaignAiWriter from "@/components/CampaignAiWriter";
 import { calculateFluxCredits } from "@/lib/fluxknight-plans";
 import CampaignContactImport, { type CampaignContact } from "./CampaignContactImport";
 import styles from "./XposureCampaigns.module.css";
@@ -153,6 +154,7 @@ export default function XposureCampaignComposer({ customers, canManageContacts }
           <label className={styles.field}>Campaign template<select value={templateKey(template)} disabled={Boolean(pending)} onChange={event => { setTemplate(templates.find(item => templateKey(item) === event.target.value) || null); setReview(null); setCanUseAiFormatting(false); setError(""); setNotice(""); }}>
             {templates.map(item => <option key={templateKey(item)} value={templateKey(item)}>{item.name.replaceAll("_", " ")} · {item.language}</option>)}
           </select></label>
+          <CampaignAiWriter key={templateKey(template)} endpoint="/api/portal/campaigns/writeup" context={{templateName:template.name,language:template.language}} values={mapPromotionMessage(template,message).values || {}} disabled={Boolean(pending) || Boolean(templateError)} onApply={values => changeMessage(renderPromotionMessage(template,{...values,customer_name:"{{customer_name}}"}))} />
           <label className={styles.field}>Message<textarea rows={7} value={message} maxLength={4000} disabled={Boolean(pending)} onChange={event => changeMessage(event.target.value)} aria-describedby="promotion-message-hint" /></label>
           <p id="promotion-message-hint" className={styles.hint}>Your message is automatically formatted on the server. You will see the approved WhatsApp preview before sending.</p>
 
