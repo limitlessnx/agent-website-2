@@ -29,27 +29,31 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   const organization = await admin.from("organizations").select("status,metadata,slug").eq("id", session.organizationId).single();
   if (organization.error || organization.data?.status !== "active") return NextResponse.json({ error: "Organization is unavailable." }, { status: 409 });
-  if (organization.data.slug === "xposure") {
-    try { await requirePortalPermission(session, ["customers.view", "customers.manage"]); }
-    catch { return NextResponse.json({ error: "You do not have permission to use campaign contacts." }, { status: 403 }); }
-    if (customerIds.length || body.templateName || body.templatePurpose || body.languageCode || body.variables) {
-      return NextResponse.json({ error: "Select studio contacts and review the automatically assigned promotion." }, { status: 400 });
-    }
-    const result = await runPortalPromotion(admin, session, body, contactIds);
-    return NextResponse.json(result.body, { status: result.status, headers: { "Cache-Control": "private, no-store" } });
-  }
-  if (contactIds.length || body.action !== undefined) return NextResponse.json({ error: "This workspace does not use the studio promotion composer." }, { status: 403 });
-  if (!templateName || !customerIds.length || customerIds.length > 500) return NextResponse.json({ error: "Choose an approved template and between 1 and 500 recipients." }, { status: 400 });
-  if (!/^[a-z0-9_:-]{2,80}$/i.test(templatePurpose)) return NextResponse.json({ error: "The template purpose is invalid." }, { status: 400 });
   let hotel = isHotelOrganization(organization.data);
   if (!hotel) {
     const profile = await admin.from("client_onboarding_profiles").select("industry").eq("organization_id", session.organizationId).maybeSingle();
     if (profile.error) return NextResponse.json({ error: "Organization industry is unavailable." }, { status: 503 });
     hotel = isHotelOrganization({ metadata: { industry: profile.data?.industry } });
   }
+  // Every non-hotel tenant inherits the reviewed campaign workflow. No slug
+  // allowlist or new installation is needed, and the old direct bulk path
+  // cannot bypass consent checks for future organizations.
+  if (!hotel) {
+    try {
+      await requirePortalPermission(session, ["customers.view"]);
+      await requirePortalPermission(session, ["customers.manage"]);
+    } catch { return NextResponse.json({ error: "You do not have permission to use campaign contacts." }, { status: 403 }); }
+    if (customerIds.length || body.templateName || body.templatePurpose || body.languageCode || body.variables) {
+      return NextResponse.json({ error: "Select consented campaign contacts and review the approved marketing template." }, { status: 400 });
+    }
+    const result = await runPortalPromotion(admin, session, body, contactIds);
+    return NextResponse.json(result.body, { status: result.status, headers: { "Cache-Control": "private, no-store" } });
+  }
+  if (contactIds.length || body.action !== undefined || body.campaignTemplate !== undefined) return NextResponse.json({ error: "Hotel campaigns must use the guest campaign workflow." }, { status: 403 });
+  if (!templateName || !customerIds.length || customerIds.length > 500) return NextResponse.json({ error: "Choose an approved template and between 1 and 500 recipients." }, { status: 400 });
+  if (!/^[a-z0-9_:-]{2,80}$/i.test(templatePurpose)) return NextResponse.json({ error: "The template purpose is invalid." }, { status: 400 });
   if (hotel && !body.templatePurpose) templatePurpose = "hotel_campaign";
   if (hotel && templatePurpose !== "hotel_campaign") return NextResponse.json({ error: "Hotel campaigns require a hotel_campaign template." }, { status: 400 });
-  if (!hotel && templatePurpose !== "campaign") return NextResponse.json({ error: "Operational templates must use their dedicated workflow." }, { status: 400 });
   let selectedTemplate;
   try {
     const { templates } = await loadLinkedCampaignTemplates(session.organizationId, true, [templatePurpose]);
