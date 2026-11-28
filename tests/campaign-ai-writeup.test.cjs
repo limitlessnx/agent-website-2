@@ -120,3 +120,64 @@ test('Limitless writer rejects ambiguous approved language variants', async () =
   assert.equal((await h.route.POST(h.request())).status, 409);
   assert.equal(h.state.drafts.length,0);
 });
+
+
+test('Xposure saved wishes and promotions are scoped draft contracts, not provider approvals', async () => {
+  const queries = [];
+  const wishes={template_name:'wishes_template',language_code:'en',purpose:'campaign',variable_keys:['customer_name','greeting','wish_message','business_name']};
+  const promotion={template_name:'xposure_studio_promotion',language_code:'en',purpose:'campaign_promotion',variable_keys:['customer_name','offer_title','offer_details','availability','booking_action']};
+  const registry=load(path.resolve('lib/campaign-draft-contracts.ts'), {
+    '@/lib/supabase/admin':{createAdminClient:()=>({from(table){queries.push(table);return {select(){return this},eq(k,v){queries.push([k,v]);return this},in(k,v){queries.push([k,Array.from(v)]);return Promise.resolve({data:[wishes,promotion]})}}}})},
+    '@/lib/campaign-starter-templates':load(path.resolve('lib/campaign-starter-templates.ts')),
+    '@/lib/whatsapp-promotion-message':load(path.resolve('lib/whatsapp-promotion-message.ts'),{'@/lib/whatsapp-message-normalizer':normalizer}),
+  });
+  const drafts=await registry.loadSavedCampaignDrafts('xposure-tenant',false);
+  assert.equal(drafts.length,2);
+  assert.ok(queries.some(row=>Array.isArray(row)&&row[0]==='organization_id'&&row[1]==='xposure-tenant'));
+  assert.equal(drafts[0].name,'wishes_template');
+  assert.deepEqual(Array.from(drafts[0].keys),wishes.variable_keys);
+  assert.equal(drafts[0].wordingVerified,false);
+  const h=service({variables:{greeting:'Happy new month!',wish_message:'Wishing you a wonderful December.'}});
+  const result=await h.api.createCampaignWriteup('xposure-tenant',drafts[0],{mode:'generate',brief:'Welcome customers to December.',variables:{}},{business_name:'Xposure Studios'});
+  assert.equal(result.variables.business_name,'Xposure Studios');
+  assert.equal(result.variables.greeting,'Happy new month!');
+  assert.equal(h.state.calls[0].input.template.name,'wishes_template');
+  assert.deepEqual(Array.from(h.state.calls[0].outputSchema.properties.variables.required),['greeting','wish_message']);
+});
+
+test('new tenant can draft with saved starters before Meta connection and hotel uses its own purpose',async()=>{
+  const registry=load(path.resolve('lib/campaign-draft-contracts.ts'),{
+    '@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select(){return this},eq(){return this},in:async()=>({data:[]})})})},
+    '@/lib/campaign-starter-templates':load(path.resolve('lib/campaign-starter-templates.ts')),
+    '@/lib/whatsapp-promotion-message':load(path.resolve('lib/whatsapp-promotion-message.ts'),{'@/lib/whatsapp-message-normalizer':normalizer}),
+  });
+  const realty=await registry.loadSavedCampaignDrafts('new-real-estate',false);
+  assert.equal(realty.length,2); assert.ok(realty.every(item=>item.wordingVerified&&item.purpose!=='hotel_campaign'));
+  const hotel=await registry.loadSavedCampaignDrafts('new-hotel',true);
+  assert.equal(hotel.length,1);assert.equal(hotel[0].purpose,'hotel_campaign');
+});
+
+test('portal offline writer is authorized, chooses only own saved mapping, ignores forged body and does not use live provider', async()=>{
+  const s=service();let permitted=true;let tenant='xposure-tenant';const scopes=[],draftCalls=[];
+  const saved={name:'wishes_template',language:'en',purpose:'campaign',body:'Customer: {{1}}\nGreeting: {{2}}\nWish: {{3}}\nBusiness: {{4}}',keys:['customer_name','greeting','wish_message','business_name'],wordingVerified:false};
+  const route=load(path.resolve('app/api/portal/campaigns/writeup/route.ts'),{
+    'next/server':{NextResponse:{json:(body,opts={})=>({body,status:opts.status||200})}},
+    '@/lib/client-auth':{getClientSession:async()=>({organizationId:tenant})},
+    '@/lib/portal-access':{requirePortalPermission:async()=>{if(!permitted)throw Error('denied')}},
+    '@/lib/supabase/admin':{createAdminClient:()=>({from:table=>({select(){return this},eq(k,v){scopes.push([table,k,v]);return this},single:async()=>({data:{status:'active',name:'Xposure Studios',metadata:{}}}),maybeSingle:async()=>({data:{industry:'photography'}})})})},
+    '@/lib/flux-credits':{assertFluxFeatureAccess:async()=>{}},
+    '@/lib/portal-campaign-templates':{CampaignTemplateError:class extends Error{},loadAssignedPromotion:async()=>{throw Error('live inventory must not be used in offline mode')},loadLinkedCampaignTemplates:async()=>{throw Error('unexpected live discovery')}},
+    '@/lib/campaign-draft-contracts':{loadSavedCampaignDrafts:async org=>org==='xposure-tenant'?[saved]:[]},
+    '@/lib/hotel-communication-policy':{isHotelOrganization:()=>false},
+    '@/lib/whatsapp-promotion-message':{validPromotionBody:()=>true},
+    '@/lib/campaign-ai-writeup':{...s.api,createCampaignWriteup:async(...args)=>{draftCalls.push(args);return {status:'draft',variables:{greeting:'Welcome',wish_message:'Happy December',business_name:'Xposure Studios'}}}},
+  });
+  const request=extra=>({headers:new Headers(),json:async()=>({mode:'generate',brief:'Welcome to December',variables:{},templateName:saved.name,language:saved.language,draftOnly:'true',organizationId:'forged-org',body:'forged template',...extra})});
+  const result=await route.POST(request());
+  assert.equal(result.status,200);assert.match(result.body.warning,/Exact Meta wording is unavailable/);
+  assert.equal(draftCalls[0][0],tenant);assert.equal(draftCalls[0][1].body,saved.body);assert.equal(draftCalls[0][3].business_name,'Xposure Studios');
+  assert.ok(scopes.some(row=>row[1]==='id'&&row[2]==='xposure-tenant'));
+  assert.equal((await route.POST(request({templateName:'other_company_template'}))).status,409);
+  tenant='other-tenant';assert.equal((await route.POST(request())).status,409);
+  permitted=false;assert.equal((await route.POST(request())).status,403);assert.equal(draftCalls.length,1);
+});
