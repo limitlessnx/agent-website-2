@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveTenantWhatsAppCredentials, type MetaWhatsAppCredentials } from "@/lib/whatsapp-credentials";
 import { sendTwilioWhatsAppMessage } from "@/lib/twilio-whatsapp";
 import { normalizeDirectMessage, normalizeTemplateVariables } from "@/lib/whatsapp-message-normalizer";
 
@@ -25,9 +26,6 @@ type SendInput = {
   textOnly?: boolean;
 };
 type MetaResponse = { messages?: Array<{ id?: string }>; error?: { code?: number; message?: string; error_data?: { details?: string } } };
-type MetaWhatsAppCredentials={providerFamily:"meta";phoneNumberId:string;accessToken:string;graphVersion:string;source:"tenant_vault"|"legacy_env"};
-type TwilioWhatsAppCredentials={providerFamily:"twilio";accountSid:string;authToken:string;from:string;senderSid?:string|null;source:"tenant_vault"};
-type WhatsAppCredentials=MetaWhatsAppCredentials|TwilioWhatsAppCredentials;
 const LIMITLESS_REALTY_ORGANIZATION_ID = "b15f21b4-5697-4d21-9421-8a34eae3476d";
 
 function supabaseConfig() {
@@ -54,52 +52,8 @@ function outsideCustomerWindow(lastCustomerMessageAt?: string | null) {
   const now = Date.now();
   return !Number.isFinite(timestamp) || timestamp > now || now - timestamp >= 24 * 60 * 60 * 1000;
 }
-async function resolveWhatsAppCredentials(organizationId: string): Promise<WhatsAppCredentials> {
-  const admin = createAdminClient();
-  const providers = ["whatsapp", "meta_whatsapp"];
-  for (const provider of providers) {
-    const { data: integration } = await admin
-      .from("organization_integrations")
-      .select("id,status,configuration")
-      .eq("organization_id", organizationId)
-      .eq("provider", provider)
-      .in("status", ["configured", "connected", "degraded"])
-      .limit(1)
-      .maybeSingle();
-    if (!integration) continue;
-    const { data: credentials, error } = await admin.rpc("get_organization_integration_credentials", {
-      p_organization_id: organizationId,
-      p_provider: provider,
-    });
-    if (!error && credentials && typeof credentials === "object") {
-      const raw = credentials as Record<string, unknown>;
-      const config = (integration.configuration || {}) as Record<string, unknown>;
-      const providerFamily=String(raw.provider_family||config.provider_family||"meta");
-      if(providerFamily==="twilio"){
-        const accountSid=String(raw.twilio_account_sid||config.twilio_subaccount_sid||"");
-        const authToken=String(raw.twilio_auth_token||"");
-        const from=String(raw.twilio_whatsapp_sender||config.sender_phone_e164||"");
-        const senderSid=String(raw.twilio_sender_sid||config.twilio_sender_sid||"")||null;
-        if(accountSid&&authToken&&from){
-          return {providerFamily:"twilio",accountSid,authToken,from,senderSid,source:"tenant_vault"};
-        }
-      }
-      const phoneNumberId = String(raw.phone_number_id || raw.phoneNumberId || config.phone_number_id || "");
-      const accessToken = String(raw.access_token || raw.accessToken || "");
-      const graphVersion = String(raw.graph_version || config.graph_version || process.env.WHATSAPP_GRAPH_VERSION || "v23.0");
-      if (phoneNumberId && accessToken) return { providerFamily:"meta",phoneNumberId, accessToken, graphVersion, source: "tenant_vault" };
-    }
-  }
-
-  const { data: org } = await admin.from("organizations").select("slug").eq("id", organizationId).maybeSingle();
-  if (org?.slug === "limitless-realty") {
-    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.META_WHATSAPP_PHONE_NUMBER_ID || "";
-    const accessToken = process.env.WHATSAPP_ACCESS_TOKEN || process.env.META_WHATSAPP_ACCESS_TOKEN || "";
-    const graphVersion = process.env.WHATSAPP_GRAPH_VERSION || "v23.0";
-    if (phoneNumberId && accessToken) return { providerFamily:"meta",phoneNumberId, accessToken, graphVersion, source: "legacy_env" };
-  }
-
-  throw new Error("WhatsApp credentials are not configured for this organization.");
+async function resolveWhatsAppCredentials(organizationId: string) {
+  return resolveTenantWhatsAppCredentials(createAdminClient(), organizationId, { allowLegacyDelivery: true });
 }
 /** Best-effort native typing/read signal; never sends a chat message. */
 export async function sendMaiaWhatsAppTypingIndicator(organizationId: string, messageId: string): Promise<boolean> {
@@ -120,9 +74,9 @@ export async function sendMaiaWhatsAppTypingIndicator(organizationId: string, me
 async function getTemplateConfig(organizationId: string, purpose: string, requestedTemplateName?: string, strictTemplateContract?: SendInput["strictTemplateContract"], requestedTemplateLanguage?: string): Promise<TemplateConfig | null> {
   const strictLimitlessLookup = organizationId === LIMITLESS_REALTY_ORGANIZATION_ID && Boolean(strictTemplateContract);
   const templateFilter = (requestedTemplateName && !strictLimitlessLookup ? `&template_name=eq.${encodeURIComponent(requestedTemplateName)}` : "") + (requestedTemplateLanguage ? `&language_code=eq.${encodeURIComponent(requestedTemplateLanguage)}` : "");
-  const limit = organizationId === LIMITLESS_REALTY_ORGANIZATION_ID ? 2 : 1;
+  const limit = 2;
   const rows = await supabaseRequest<Array<TemplateConfig & { status: string }>>(`whatsapp_template_configs?organization_id=eq.${encodeURIComponent(organizationId)}&purpose=eq.${encodeURIComponent(purpose)}&status=eq.active${templateFilter}&select=template_name,language_code,variable_keys,metadata,status&limit=${limit}`);
-  if (organizationId === LIMITLESS_REALTY_ORGANIZATION_ID && rows.length !== 1) return null;
+  if (rows.length !== 1) return null;
   return rows[0] || null;
 }
 function exactVariableOrder(left: unknown, right: readonly string[]) {
