@@ -10,12 +10,10 @@ function harness(options = {}) {
   const state = { permissions: [], rows: [], filters: [] };
   const route = load(path.join(root, 'app/api/portal/campaigns/contacts/route.ts'), {
     'next/server': { NextResponse: { json: (body, { status = 200 } = {}) => ({ body, status }) } },
-    '@/lib/xposure-tenant-authorization': { authorizeXposureTenantAccess: async permission => {
-      state.permissions.push(permission);
-      return options.denied ? { ok: false, response: { status: 403 } } : { ok: true, organizationId: 'xposure-a' };
-    } },
+    '@/lib/client-auth': {getClientSession: async()=>options.anonymous?null:{organizationId:options.organizationId||'xposure-a',userId:'user-a'}},
+    '@/lib/portal-access': {requirePortalPermission:async(_session,[permission])=>{state.permissions.push(permission);if(options.denied)throw Error('denied');}},
     '@/lib/campaign-phone-contacts': validation,
-    '@/lib/supabase/admin': { createAdminClient: () => ({ from(table) { assert.equal(table, 'tenant_customer_contacts'); return {
+    '@/lib/supabase/admin': { createAdminClient: () => ({ from(table) { if(table==='organizations')return {select(){return this;},eq(key,value){state.filters.push([key,value]);return this;},single:async()=>({data:{status:options.inactive?'inactive':'active'}})}; assert.equal(table, 'tenant_customer_contacts'); return {
       insert(rows) { state.rows = rows; return this; }, select() { return this; },
       eq(key, value) { state.filters.push([key, value]); return this; }, order() { return this; }, limit() { return this; },
       then(resolve) { return Promise.resolve({ data: state.rows.map((row, i) => ({ ...row, id: String(i) })), error: options.error }).then(resolve); }
@@ -55,4 +53,13 @@ test('read and write permission failures cannot reach the contact store; reads s
 test('iPhone grouped vCards and folded names remain readable for review', () => {
   const rows = vcard.parseVCard('BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Studio\r\n Client\r\nitem1.TEL;TYPE=CELL:+2348000000000\r\nEND:VCARD\r\n');
   assert.equal(rows.length, 1); assert.equal(rows[0].name, 'StudioClient'); assert.equal(rows[0].phone, '+2348000000000');
+});
+
+test('new workspace imports are isolated and inactive or anonymous tenants cannot import',async()=>{
+ const h=harness({organizationId:'new-tenant'});
+ assert.equal((await h.route.POST(h.request({contacts:[{name:'Ada',phone:'+2348000000000'}],whatsappConsentConfirmed:true,organizationId:'another-tenant'}))).status,201);
+ assert.equal(h.state.rows[0].organization_id,'new-tenant');
+ for (const [options,status] of [[{inactive:true},403],[{anonymous:true},401]]) {
+  const denied=harness(options);assert.equal((await denied.route.GET()).status,status);assert.equal(denied.state.rows.length,0);
+ }
 });
